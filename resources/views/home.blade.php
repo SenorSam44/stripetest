@@ -12,7 +12,7 @@
                 <div class="card">
                     <div class="card-header">Dashboard</div>
 
-                    <div class="card-body">
+                    <div class="card-body text-center">
                         @if (session('status'))
                             <div class="alert alert-success" role="alert">
                                 {{ session('status') }}
@@ -22,9 +22,15 @@
                         Welcome to the Dashboard
 
                         @auth
-                            <div>
-                                <a href="{{ url('/create') }}" class="text-sm text-gray-700 underline">Log in</a>
+                            <div class="text-capitalize text-monospace font-weight-bold text-left mt-3"> plan</div>
+                            <div class="d-flex justify-content-around mb-4">
+                                <a href="{{ route('plan.show', 'new')  }}" class="btn btn-primary mt-3"> Create Plan</a>
+                                <a href="{{ url('/plan') }}" class="btn btn-dark mt-3"> View Plans</a>
+                            </div>
 
+                                <div class="text-capitalize text-monospace font-weight-bold text-left mt-3"> Subscription</div>
+                            <div class="d-flex justify-content-around mb-3">
+                                <a href="{{ route('subscription.index') }}" class="btn btn-success mt-3"> View Subscription</a>
                             </div>
                         @endauth
                     </div>

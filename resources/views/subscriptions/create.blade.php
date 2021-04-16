@@ -3,7 +3,7 @@
 @section('content')
     <div class="container">
         <a href="{{route('plan.index')}}"> < Back</a>
-        <div class="card" style="width:24rem;margin:auto;">
+        <div class="card" style="width:24rem;margin:auto;"  >
             <div class="card-header">
                 @if(isset($product->name))
                     Edit {{$product->name}}

@@ -32,5 +32,10 @@ Route::group(['middleware' => 'auth'], function(){
 //    Route::get('/store-plan', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
     Route::apiResource('/plan', PlanController::class);
     Route::apiResource('/subscription', SubscriptionController::class);
+    Route::post('/subscribe-to/{plan}', [SubscriptionController::class, 'subscribe'])->name('subscription.subscribe');
+    Route::post('/edit-subscription/{subscription}', [SubscriptionController::class, 'editSubscription'])->name('subscription.edit');
+    Route::post('/delete-subscription/{subscription}', function () {
+        return view('welcome');
+    })->name('subscriptiondelete');
 
 });

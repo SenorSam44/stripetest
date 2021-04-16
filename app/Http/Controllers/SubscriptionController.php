@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Stripe\StripeClient;
 use \App\Models\Plan;
 
@@ -17,62 +19,45 @@ class SubscriptionController extends Controller
      */
     public function __construct()
     {
-        $this->stripe = new StripeClient(env('STRIPE_SECRET'));
+//        $this->stripe = new StripeClient(env("STRIPE_SECRET"));
+
+        $this->stripe = new StripeClient("sk_test_51IgRgmLdDBaVtjVPPhF0Cjjd4PAZtHIm3IRQPFxovVSxnZNk6fpasjEsTVNayED7Qrmu0KcpVSJSI4rg1Cr3K6ew003sQq4M9I");
     }
 
     public function index()
     {
-        return view('plans.create');
+        $subscriptions = $this->stripe->subscriptions->all() ;
+        $products = array();
+        foreach ($subscriptions as $subscription){
+//            dd($subscription);
+            array_push($products, $this->stripe->products->retrieve($subscription->plan->product));
+        }
+
+        return view('subscriptions.index')
+            ->with('subscriptions', $subscriptions)
+            ->with('products', $products);
     }
 
     /**
+     * @param Request $request
+     * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Http\RedirectResponse|\Illuminate\Routing\Redirector
+     * @throws \Stripe\Exception\ApiErrorException
+     */
+
+
+    /**
+     * @param $slug
      * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View
      */
-    public function create()
+    public function show(Request $request, $id)
     {
-        return view('plans.create');
-    }
+        $subscription = $this->stripe->subscriptions->retrieve($id);
+//        dd($subscription);
 
-    /**
-     * Store a newly created resource in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
-     */
-    public function store(Request $request)
-    {
-        $plan = Plan::find($request->plan);
-        $stripeProduct = $this->stripe->products->create([
-            'name' => $plan->name,
-        ]);
-
-        $stripePlanCreation = $this->stripe->plans->create([
-            'amount' => $plan->cost,
-            'currency' => env('CASHIER_CURRENCY'),
-            'interval' => 'month', //  it can be day,week,month or year
-            'product' => $stripeProduct->id,
-        ]);
-
-
-        Plan::create([
-            'name' => $plan->name,
-            'slug' => $plan->name.Carbon::now(),
-            'cost' => $plan->cost,
-            'stripe_plan' => $stripePlanCreation->id,
-        ]);
-
-        return redirect(route('plan.index'));
-    }
-
-    /**
-     * Display the specified resource.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
-    public function show($id)
-    {
-
+        $product = $this->stripe->products->retrieve($subscription->plan->product);
+        return view('subscriptions.show')
+            ->with('subscription', $subscription)
+            ->with('product', $product);
     }
 
     /**
@@ -83,41 +68,57 @@ class SubscriptionController extends Controller
      */
     public function edit($id)
     {
-        //
+
     }
 
     /**
      * @param Request $request
-     * @param $id
+     * @param $slug
      * @return \Illuminate\Http\RedirectResponse
      */
 
-    public function update(Request $request, $id)
+    public function editSubscription(Request $request, $id){
+
+        $this->stripe->subscriptions->update( $id, [
+            'cancel_at_period_end' => $request->cancel_period_end,
+        ]);
+
+        return redirect()->back()->with('success', 'Subscription updated');
+
+    }
+
+    /**
+     * @param $id
+     * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Http\RedirectResponse|\Illuminate\Routing\Redirector
+     * @throws \Stripe\Exception\ApiErrorException
+     */
+
+    public function deleteSubscription(Request $request, $id)
     {
-        $plan = Plan::find($request->plan);
+        dd($id);
+        $this->stripe->subscriptions->cancel(
+            $id
+        );
 
-        $user = $request->user();
+        return redirect(route('subscription.index'));
+    }
 
-        $paymentMethod = $request->paymentMethod;
+    public function subscribe(Request $request, $plan_id){
+        $plan = $this->stripe->plans->retrieve($plan_id);
+
+//        dd($plan);
+        $user = User::find(Auth::id());
+
+        $paymentMethod = $request->payment_method;
 
         $stripeCustomer = $user->createOrGetStripeCustomer();
         $user->updateDefaultPaymentMethod($paymentMethod);
-        $user->newSubscription('default', $plan->stripe_plan)
+
+        $user->newSubscription('default', $plan->id)
             ->create($paymentMethod, [
                 'email' => $user->email,
             ]);
 
         return redirect()->route('home')->with('success', 'Your plan subscribed successfully');
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
-    public function destroy($id)
-    {
-        //
     }
 }
